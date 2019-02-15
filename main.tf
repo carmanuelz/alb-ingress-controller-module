@@ -14,15 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-provider "aws" {
-  region = "${var.aws_region}"
-}
-
-provider "kubernetes" {
-  version        = ">= 1.5"
-  config_context = "${var.config_context}"
-}
-
 resource "aws_iam_user" "alb-ingress-controler-user" {
   name = "alb-ingress-controler"
 }

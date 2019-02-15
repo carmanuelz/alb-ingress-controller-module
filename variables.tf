@@ -24,10 +24,6 @@ variable "version" {
   description = "Version of alb-ingress-controller to use"
 }
 
-variable "config_context" {
-  description = "kubectl config context to use"
-}
-
 variable "cluster_role" {
   default = "alb-ingress-controller"
   description = "name of the cluster role created with clutser-role.yaml"
