@@ -8,10 +8,6 @@ The latest version of the alb-ingress-controller image can be found at https://g
 
 ## Important install steps
 
-Because the kubernetes terraform provider does not yet support creating cluster roles (support should be coming in the next version), you need to run
-`kubectl apply -f cluster-role.yaml`
-before running the terraform module.
-
 The kubernetes terraform provider currently has a bug where specifying if service account tokens should be automounted is broken. To get around this you have to edit the deployment with kubectl after a `terraform apply`. Run `kubectl -n kube-system edit deployment/alb-ingress-controller`. Then add `automountServiceAccountToken: true` in the template spec right before the container is defined.
 
 

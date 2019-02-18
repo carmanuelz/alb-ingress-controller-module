@@ -24,11 +24,6 @@ variable "version" {
   description = "Version of alb-ingress-controller to use"
 }
 
-variable "cluster_role" {
-  default = "alb-ingress-controller"
-  description = "name of the cluster role created with clutser-role.yaml"
-}
-
 variable "cluster_name" {
   description = "Name of your k8 cluster"
 }

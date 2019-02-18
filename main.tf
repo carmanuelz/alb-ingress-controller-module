@@ -170,6 +170,60 @@ resource "kubernetes_service_account" "alb-ingress-controller-sa" {
   automount_service_account_token = "true"
 }
 
+resource "kubernetes_cluster_role" "cluter_role" {
+  metadata {
+    name      = "alb-ingress-controller"
+    labels {
+      "app" = "alb-ingress-controller"
+    }
+  }
+
+  rule {
+    api_groups = [
+      "",
+      "extensions"
+    ]
+
+    resources = [
+      "configmaps",
+      "endpoints",
+      "events",
+      "ingresses",
+      "ingresses/status",
+      "services"
+    ]
+
+    verbs = [
+      "create",
+      "get",
+      "list",
+      "update",
+      "watch",
+      "patch"
+    ]
+  }
+  rule {
+    api_groups = [
+      "",
+      "extensions"
+    ]
+
+    resources = [
+      "nodes",
+      "pods",
+      "secrets",
+      "services",
+      "namespaces"
+    ]
+
+    verbs = [
+      "get",
+      "list",
+      "watch"
+    ]
+  }
+}
+
 resource "kubernetes_cluster_role_binding" "cluster_role_bind" {
   metadata {
     name = "alb-ingress-controller"
@@ -181,7 +235,7 @@ resource "kubernetes_cluster_role_binding" "cluster_role_bind" {
 
   role_ref {
     api_group = "rbac.authorization.k8s.io"
-    name      = "${var.cluster_role}"
+    name      = "${kubernetes_cluster_role.cluter_role.metadata.0.name}"
     kind      = "ClusterRole"
   }
 
