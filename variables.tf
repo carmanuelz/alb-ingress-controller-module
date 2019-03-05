@@ -19,8 +19,8 @@ variable "aws_region" {
   description = "aws region to use"
 }
 
-variable "version" {
-  default = "1.1.1"
+variable "controller_version" {
+  default = "1.1.2"
   description = "Version of alb-ingress-controller to use"
 }
 

@@ -273,12 +273,11 @@ resource "kubernetes_deployment" "deployment" {
       }
 
       spec {
-        #!!!!set manually: automount_service_account_token = "true"
         service_account_name = "${kubernetes_service_account.alb-ingress-controller-sa.metadata.0.name}"
 
         container {
           name              = "alb-ingress-controller"
-          image             = "docker.io/amazon/aws-alb-ingress-controller:v${var.version}"
+          image             = "docker.io/amazon/aws-alb-ingress-controller:v${var.controller_version}"
           image_pull_policy = "Always"
 
           # Limit the namespace where this ALB Ingress Controller deployment will
