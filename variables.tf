@@ -15,12 +15,12 @@ limitations under the License.
 */
 
 variable "aws_region" {
-  default = "us-east-1"
+  default     = "us-east-1"
   description = "aws region to use"
 }
 
 variable "controller_version" {
-  default = "1.1.2"
+  default     = "1.1.2"
   description = "Version of alb-ingress-controller to use"
 }
 

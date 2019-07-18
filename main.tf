@@ -135,37 +135,38 @@ resource "aws_iam_policy" "alb-ingress-controler-s3-policy" {
   ]
 }
 EOF
+
 }
 
 resource "aws_iam_user_policy_attachment" "alb-ingress-controler-attach" {
-  user       = "${aws_iam_user.alb-ingress-controler-user.name}"
-  policy_arn = "${aws_iam_policy.alb-ingress-controler-s3-policy.arn}"
+  user = aws_iam_user.alb-ingress-controler-user.name
+  policy_arn = aws_iam_policy.alb-ingress-controler-s3-policy.arn
 }
 
 resource "aws_iam_access_key" "alb-ingress-controler-key" {
-  user = "${aws_iam_user.alb-ingress-controler-user.name}"
+  user = aws_iam_user.alb-ingress-controler-user.name
 }
 
 resource "kubernetes_secret" "aws_key" {
   metadata {
-    name      = "alb-ingress-controler-aws"
+    name = "alb-ingress-controler-aws"
     namespace = "kube-system"
   }
 
-  data {
-    "key_id" = "${aws_iam_access_key.alb-ingress-controler-key.id}"
-    "key"    = "${aws_iam_access_key.alb-ingress-controler-key.secret}"
+  data = {
+    "key_id" = aws_iam_access_key.alb-ingress-controler-key.id
+    "key" = aws_iam_access_key.alb-ingress-controler-key.secret
   }
 }
 
 resource "kubernetes_service_account" "alb-ingress-controller-sa" {
   metadata {
-    name      = "alb-ingress-controller"
+    name = "alb-ingress-controller"
     namespace = "kube-system"
   }
 
   secret {
-    name = "${kubernetes_secret.aws_key.metadata.0.name}"
+    name = kubernetes_secret.aws_key.metadata[0].name
   }
 
   automount_service_account_token = "true"
@@ -173,8 +174,8 @@ resource "kubernetes_service_account" "alb-ingress-controller-sa" {
 
 resource "kubernetes_cluster_role" "cluter_role" {
   metadata {
-    name      = "alb-ingress-controller"
-    labels {
+    name = "alb-ingress-controller"
+    labels = {
       "app" = "alb-ingress-controller"
     }
   }
@@ -182,7 +183,7 @@ resource "kubernetes_cluster_role" "cluter_role" {
   rule {
     api_groups = [
       "",
-      "extensions"
+      "extensions",
     ]
 
     resources = [
@@ -191,7 +192,7 @@ resource "kubernetes_cluster_role" "cluter_role" {
       "events",
       "ingresses",
       "ingresses/status",
-      "services"
+      "services",
     ]
 
     verbs = [
@@ -200,13 +201,13 @@ resource "kubernetes_cluster_role" "cluter_role" {
       "list",
       "update",
       "watch",
-      "patch"
+      "patch",
     ]
   }
   rule {
     api_groups = [
       "",
-      "extensions"
+      "extensions",
     ]
 
     resources = [
@@ -214,13 +215,13 @@ resource "kubernetes_cluster_role" "cluter_role" {
       "pods",
       "secrets",
       "services",
-      "namespaces"
+      "namespaces",
     ]
 
     verbs = [
       "get",
       "list",
-      "watch"
+      "watch",
     ]
   }
 }
@@ -229,78 +230,74 @@ resource "kubernetes_cluster_role_binding" "cluster_role_bind" {
   metadata {
     name = "alb-ingress-controller"
 
-    labels {
+    labels = {
       app = "alb-ingress-controller"
     }
   }
 
   role_ref {
     api_group = "rbac.authorization.k8s.io"
-    name      = "${kubernetes_cluster_role.cluter_role.metadata.0.name}"
-    kind      = "ClusterRole"
+    name = kubernetes_cluster_role.cluter_role.metadata[0].name
+    kind = "ClusterRole"
   }
 
   subject {
     api_group = ""
-    kind      = "ServiceAccount"
-    name      = "${kubernetes_service_account.alb-ingress-controller-sa.metadata.0.name}"
+    kind = "ServiceAccount"
+    name = kubernetes_service_account.alb-ingress-controller-sa.metadata[0].name
     namespace = "kube-system"
   }
 }
 
 resource "kubernetes_deployment" "deployment" {
   metadata {
-    name      = "alb-ingress-controller"
+    name = "alb-ingress-controller"
     namespace = "kube-system"
 
-    labels {
+    labels = {
       app = "alb-ingress-controller"
     }
   }
 
   spec {
     selector {
-      match_labels {
+      match_labels = {
         app = "alb-ingress-controller"
       }
     }
 
     template {
       metadata {
-        labels {
+        labels = {
           app = "alb-ingress-controller"
         }
       }
 
       spec {
-        service_account_name = "${kubernetes_service_account.alb-ingress-controller-sa.metadata.0.name}"
+        service_account_name = kubernetes_service_account.alb-ingress-controller-sa.metadata[0].name
 
         container {
-          name              = "alb-ingress-controller"
-          image             = "docker.io/amazon/aws-alb-ingress-controller:v${var.controller_version}"
+          name = "alb-ingress-controller"
+          image = "docker.io/amazon/aws-alb-ingress-controller:v${var.controller_version}"
           image_pull_policy = "Always"
 
           # Limit the namespace where this ALB Ingress Controller deployment will
           # resolve ingress resources. If left commented, all namespaces are used.
           # - --watch-namespace=your-k8s-namespace
 
-
           # Setting the ingress-class flag below ensures that only ingress resources with the
           # annotation kubernetes.io/ingress.class: "alb" are respected by the controller. You may
           # choose any class you'd like for this controller to respect.
           # - --ingress-class=alb
-
 
           # Name of your cluster. Used when naming resources created
           # by the ALB Ingress Controller, providing distinction between
           # clusters.
           # - --cluster-name=your-cluster-name
 
-
           # AWS VPC ID this ingress controller will use to create AWS resources.
           # If unspecified, it will be discovered from ec2metadata.
           # - --aws-vpc-id=vpc-xxxxxx
-
 
           # AWS region this ingress controller will operate in.
           # If unspecified, it will be discovered from ec2metadata.
@@ -321,17 +318,17 @@ resource "kubernetes_deployment" "deployment" {
           ]
           security_context {
             allow_privilege_escalation = "false"
-            privileged                 = "false"
-            run_as_user                = "999"
-            run_as_non_root            = "true"
+            privileged = "false"
+            run_as_user = "999"
+            run_as_non_root = "true"
           }
           env {
             name = "AWS_ACCESS_KEY_ID"
 
             value_from {
               secret_key_ref {
-                name = "${kubernetes_secret.aws_key.metadata.0.name}"
-                key  = "key_id"
+                name = kubernetes_secret.aws_key.metadata[0].name
+                key = "key_id"
               }
             }
           }
@@ -340,14 +337,14 @@ resource "kubernetes_deployment" "deployment" {
 
             value_from {
               secret_key_ref {
-                name = "${kubernetes_secret.aws_key.metadata.0.name}"
-                key  = "key"
+                name = kubernetes_secret.aws_key.metadata[0].name
+                key = "key"
               }
             }
           }
           env {
-            name  = "AWS_DEFAULT_REGION"
-            value = "${var.aws_region}"
+            name = "AWS_DEFAULT_REGION"
+            value = var.aws_region
           }
         }
       }
