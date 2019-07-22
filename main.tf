@@ -274,6 +274,7 @@ resource "kubernetes_deployment" "deployment" {
       }
 
       spec {
+        automount_service_account_token = true
         service_account_name = kubernetes_service_account.alb-ingress-controller-sa.metadata[0].name
 
         container {
