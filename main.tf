@@ -14,10 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-resource "aws_iam_user" "alb-ingress-controler-user" {
-  name = "alb-ingress-controler"
-}
-
 resource "aws_iam_policy" "alb-ingress-controler-s3-policy" {
   name = "alb-ingress-controler-s3"
   path = "/"
@@ -138,35 +134,45 @@ EOF
 
 }
 
-resource "aws_iam_user_policy_attachment" "alb-ingress-controler-attach" {
-  user = aws_iam_user.alb-ingress-controler-user.name
+locals {
+  sa_name = "alb-ingress-controller"
+}
+
+data "aws_iam_policy_document" "assume_role_policy" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    effect  = "Allow"
+
+    condition {
+      test     = "StringEquals"
+      variable = "${replace(var.openid_url, "https://", "")}:sub"
+      values   = ["system:serviceaccount:kube-system:${local.sa_name}"]
+    }
+
+    principals {
+      identifiers = [var.openid_arn]
+      type        = "Federated"
+    }
+  }
+}
+
+resource "aws_iam_role" "role" {
+  assume_role_policy = data.aws_iam_policy_document.assume_role_policy.json
+  name = "alb-ingress-controler"
+}
+
+resource "aws_iam_role_policy_attachment" "role-policy-attach" {
+  role       = aws_iam_role.role.name
   policy_arn = aws_iam_policy.alb-ingress-controler-s3-policy.arn
-}
-
-resource "aws_iam_access_key" "alb-ingress-controler-key" {
-  user = aws_iam_user.alb-ingress-controler-user.name
-}
-
-resource "kubernetes_secret" "aws_key" {
-  metadata {
-    name = "alb-ingress-controler-aws"
-    namespace = "kube-system"
-  }
-
-  data = {
-    "key_id" = aws_iam_access_key.alb-ingress-controler-key.id
-    "key" = aws_iam_access_key.alb-ingress-controler-key.secret
-  }
 }
 
 resource "kubernetes_service_account" "alb-ingress-controller-sa" {
   metadata {
-    name = "alb-ingress-controller"
+    name = local.sa_name
     namespace = "kube-system"
-  }
-
-  secret {
-    name = kubernetes_secret.aws_key.metadata[0].name
+    annotations = {
+      "eks.amazonaws.com/role-arn" = aws_iam_role.role.arn
+    }
   }
 
   automount_service_account_token = "true"
@@ -276,7 +282,9 @@ resource "kubernetes_deployment" "deployment" {
       spec {
         automount_service_account_token = true
         service_account_name = kubernetes_service_account.alb-ingress-controller-sa.metadata[0].name
-
+        security_context {
+          fs_group = "999"
+        }
         container {
           name = "alb-ingress-controller"
           image = "docker.io/amazon/aws-alb-ingress-controller:v${var.controller_version}"
@@ -322,30 +330,9 @@ resource "kubernetes_deployment" "deployment" {
             privileged = "false"
             run_as_user = "999"
             run_as_non_root = "true"
-          }
-          env {
-            name = "AWS_ACCESS_KEY_ID"
-
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.aws_key.metadata[0].name
-                key = "key_id"
-              }
+            capabilities {
+              drop = ["all"]
             }
-          }
-          env {
-            name = "AWS_SECRET_ACCESS_KEY"
-
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.aws_key.metadata[0].name
-                key = "key"
-              }
-            }
-          }
-          env {
-            name = "AWS_DEFAULT_REGION"
-            value = var.aws_region
           }
         }
       }

@@ -20,12 +20,20 @@ variable "aws_region" {
 }
 
 variable "controller_version" {
-  default     = "1.1.2"
+  default     = "1.1.3"
   description = "Version of alb-ingress-controller to use"
 }
 
 variable "cluster_name" {
   description = "Name of your k8 cluster"
+}
+
+variable "openid_url" {
+  description = "OpenID url of your k8 cluster"
+}
+
+variable "openid_arn" {
+  description = "OpenID ARN of your k8 cluster"
 }
 
 variable "vpc_id" {
